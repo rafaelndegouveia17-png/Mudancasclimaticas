@@ -11,3 +11,21 @@
 > Separador automático usando peças eletrônicas  para separar o lixo com o Google Teachable Machine
 > Incentivar o descarte correto de lixo com um site que mostra os impactos ao meio ambiente e com uma matéria explicando o que ira acontecer e como você pode ajudar
 > Um Bot do Discord que diz números quantos animais são afetados dependo da opção escolhida como “jogar um chiclete no mar” “irá demorar 400 anos para ele se dissolver e animais poderão comer e se engasgar com ele”
+
+
+## As bibliotecas que vou usar:
+pip install tensorflow
+pip install flask
+pip install flask-cors
+pip install pillow
+pip install numpy
+pip install opencv-python
+pip install gunicorn
+
+## Referências úteis:
+nenhuma
+
+## Os artigos de orientação que me ajudarão durante o desenvolvimento
+ Video de explicação de como implementar a câmera do usuario em HTML(https://www.youtube.com/watch?v=DSTXUEHZRiU&t=28s)
+
+
