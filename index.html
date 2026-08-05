@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Classificador IA — Descarte Inteligente (YOLOv8)</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+
+<!-- ONNX Runtime Web: roda o modelo YOLOv8 (.onnx) direto no navegador -->
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/ort.min.js"></script>
+
+<style>
+  :root{
+    --bg: #F1F4EE;
+    --bg-alt: #E4EBE0;
+    --panel: #FFFFFF;
+    --ink: #182A20;
+    --ink-soft: #55665A;
+    --line: #D7DED0;
+
+    --primary: #2F6B4F;
+    --primary-dark: #1F4B37;
+    --primary-soft: #DDEAE1;
+
+    --papel: #2E5FA3;
+    --plastico: #C0392B;
+    --vidro: #2E8B57;
+    --metal: #D9A824;
+    --organico: #7B4B2A;
+    --rejeito: #6B6E70;
+    --perigoso: #D2691E;
+
+    --radius: 14px;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  *{ box-sizing: border-box; }
+
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  header.top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    padding: 18px 28px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top:0;
+    z-index: 10;
+    flex-wrap: wrap;
+  }
+
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-family: var(--font-display);
+    font-weight:700;
+    font-size: 1.15rem;
+    color: var(--primary-dark);
+  }
+  .brand .dot{
+    width:12px; height:12px; border-radius:50%;
+    background: var(--primary);
+  }
+
+  nav.tabs{
+    display:flex;
+    gap:6px;
+    background: var(--bg-alt);
+    padding:5px;
+    border-radius: 999px;
+  }
+  nav.tabs button{
+    border:none;
+    background: transparent;
+    padding: 9px 18px;
+    border-radius: 999px;
+    font-family: var(--font-body);
+    font-weight:600;
+    font-size: 0.92rem;
+    color: var(--ink-soft);
+    cursor:pointer;
+    transition: background .18s ease, color .18s ease;
+  }
+  nav.tabs button.active{
+    background: var(--primary);
+    color: #fff;
+  }
+  nav.tabs button:not(.active):hover{
+    color: var(--ink);
+  }
+
+  main{
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 32px 24px 64px;
+  }
+
+  section.view{ display:none; }
+  section.view.active{ display:block; animation: fade .25s ease; }
+  @keyframes fade{ from{ opacity:0; transform: translateY(4px);} to{opacity:1; transform:none;} }
+
+  .classify-grid{
+    display:grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 24px;
+    align-items:start;
+  }
+  @media (max-width: 820px){
+    .classify-grid{ grid-template-columns: 1fr; }
+  }
+
+  .cam-card, .result-card{
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px;
+  }
+
+  .cam-frame{
+    position:relative;
+    border-radius: 10px;
+    overflow:hidden;
+    background: #0f1a13;
+    aspect-ratio: 4/3;
+  }
+  video, canvas.overlay{
+    position:absolute;
+    inset:0;
+    width:100%; height:100%;
+    object-fit: contain;
+    transform: scaleX(-1); /* espelha como um espelho, boxes acompanham */
+  }
+  video{ display:block; }
+  canvas.overlay{ pointer-events:none; }
+  canvas#work{ display:none; } /* canvas de trabalho, usado só para o modelo */
+
+  .live-badge{
+    position:absolute;
+    top:12px; left:12px;
+    z-index: 2;
+    display:flex;
+    align-items:center;
+    gap:7px;
+    background: rgba(15,26,19,0.65);
+    color:#fff;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    backdrop-filter: blur(3px);
+  }
+  .live-badge .pulse{
+    width:8px; height:8px; border-radius:50%;
+    background:#ff5f5f;
+    animation: pulse 1.4s infinite;
+  }
+  .live-badge.paused .pulse{ background: var(--ink-soft); animation:none; }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(255,95,95,.55);}
+    70%{ box-shadow:0 0 0 9px rgba(255,95,95,0);}
+    100%{ box-shadow:0 0 0 0 rgba(255,95,95,0);}
+  }
+
+  .cam-controls{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:14px;
+    gap:10px;
+    flex-wrap: wrap;
+  }
+  .status-text{ font-size: 0.85rem; color: var(--ink-soft); }
+
+  button.pill{
+    border:none;
+    background: var(--primary);
+    color:#fff;
+    font-family: var(--font-body);
+    font-weight:600;
+    padding: 10px 18px;
+    border-radius: 999px;
+    cursor:pointer;
+    font-size:0.9rem;
+    transition: background .15s ease, transform .1s ease;
+  }
+  button.pill:hover{ background: var(--primary-dark); }
+  button.pill:active{ transform: scale(0.97); }
+  button.pill.secondary{ background: var(--bg-alt); color: var(--ink); }
+  button.pill.secondary:hover{ background: var(--line); }
+  button.pill:disabled{ opacity:.5; cursor:not-allowed; }
+
+  .result-headline{ display:flex; align-items:center; gap:14px; margin-bottom: 6px; }
+  .result-swatch{
+    width: 46px; height:46px; border-radius: 10px; flex-shrink:0;
+    background: var(--rejeito);
+    display:flex; align-items:center; justify-content:center; font-size: 1.3rem;
+  }
+  .result-name{ font-family: var(--font-display); font-weight:700; font-size: 1.4rem; line-height:1.1; }
+  .result-bin{ font-size: 0.85rem; color: var(--ink-soft); }
+  .result-conf{ font-family: var(--font-mono); font-size: 0.85rem; color: var(--ink-soft); margin: 4px 0 18px; }
+
+  .bars{ display:flex; flex-direction:column; gap:10px; }
+  .bar-row{ display:grid; grid-template-columns: 92px 1fr 52px; align-items:center; gap:10px; }
+  .bar-label{ font-size: 0.82rem; color: var(--ink-soft); white-space:nowrap; overflow:hidden; text-overflow: ellipsis; }
+  .bar-track{ height:9px; background: var(--bg-alt); border-radius: 999px; overflow:hidden; }
+  .bar-fill{ height:100%; width:0%; border-radius: 999px; transition: width .25s ease; background: var(--primary); }
+  .bar-pct{ font-family: var(--font-mono); font-size: 0.78rem; text-align:right; color: var(--ink-soft); }
+
+  .empty-hint{ font-size:0.88rem; color: var(--ink-soft); padding: 10px 0; }
+
+  .guide-intro{ max-width: 640px; margin-bottom: 26px; }
+  .guide-intro h1, .about h1{ font-family: var(--font-display); font-size: 1.7rem; margin: 0 0 8px; color: var(--primary-dark); }
+  .guide-intro p, .about p{ color: var(--ink-soft); line-height:1.55; }
+
+  .guide-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+  .guide-card{ background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; border-top: 5px solid var(--rejeito); }
+  .guide-card .icon{ font-size: 1.6rem; }
+  .guide-card h3{ font-family: var(--font-display); margin: 10px 0 2px; font-size: 1.05rem; }
+  .guide-card .bin-label{ font-family: var(--font-mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-soft); margin-bottom:10px; display:block; }
+  .guide-card ul{ margin:0; padding-left: 18px; font-size: 0.86rem; color: var(--ink-soft); line-height:1.6; }
+
+  .about{ max-width: 720px; }
+  .about .block{ margin-bottom: 26px; }
+  .about h2{ font-family: var(--font-display); font-size: 1.1rem; color: var(--primary-dark); margin-bottom: 6px; }
+  .about ul{ color: var(--ink-soft); line-height: 1.7; padding-left: 20px; }
+  .about .stack{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  .about .stack span{ background: var(--primary-soft); color: var(--primary-dark); font-family: var(--font-mono); font-size: 0.76rem; padding: 5px 10px; border-radius: 8px; }
+  .about .callout{ background: var(--bg-alt); border-left: 4px solid var(--primary); padding: 14px 16px; border-radius: 8px; font-size: 0.88rem; color: var(--ink); }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand"><span class="dot"></span> Classificador IA</div>
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="classificar">Classificar</button>
+    <button class="tab-btn" data-tab="guia">Guia de descarte</button>
+    <button class="tab-btn" data-tab="sobre">Sobre o projeto</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ===================== ABA: CLASSIFICAR ===================== -->
+  <section class="view active" id="view-classificar">
+    <div class="classify-grid">
+
+      <div class="cam-card">
+        <div class="cam-frame">
+          <video id="video" autoplay playsinline muted></video>
+          <canvas id="overlay" class="overlay"></canvas>
+          <div class="live-badge paused" id="liveBadge">
+            <span class="pulse"></span> <span id="liveBadgeText">CÂMERA PARADA</span>
+          </div>
+        </div>
+        <canvas id="work" width="640" height="640"></canvas>
+
+        <div class="cam-controls">
+          <span class="status-text" id="statusText">Toque em "Ligar câmera" para começar</span>
+          <div style="display:flex; gap:8px;">
+            <button class="pill" id="toggleCam">Ligar câmera</button>
+            <button class="pill secondary" id="togglePause" disabled>Pausar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="result-card">
+        <div class="result-headline">
+          <div class="result-swatch" id="resultSwatch">♻️</div>
+          <div>
+            <div class="result-name" id="resultName">Aguardando câmera…</div>
+            <div class="result-bin" id="resultBin">—</div>
+          </div>
+        </div>
+        <div class="result-conf" id="resultConf">Objetos detectados: —</div>
+
+        <div class="bars" id="bars">
+          <div class="empty-hint">As detecções em tempo real vão aparecer aqui assim que a câmera for ligada.</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===================== ABA: GUIA DE DESCARTE ===================== -->
+  <section class="view" id="view-guia">
+    <div class="guide-intro">
+      <h1>Para onde vai cada resíduo</h1>
+      <p>As cores abaixo seguem o padrão de coleta seletiva usado no Brasil (Resolução CONAMA 275). O app destaca automaticamente a categoria correspondente a cada objeto detectado — mas essa aba funciona como referência mesmo sem a câmera.</p>
+    </div>
+    <div class="guide-grid" id="guideGrid"></div>
+  </section>
+
+  <!-- ===================== ABA: SOBRE O PROJETO ===================== -->
+  <section class="view" id="view-sobre">
+    <div class="about">
+      <h1>Sobre o projeto</h1>
+      <p>Este projeto usa um modelo <strong>YOLOv8</strong> (exportado para ONNX) para detectar, pela câmera, objetos descartados em tempo real — desenhando uma caixa ao redor de cada item e indicando em qual lixeira ele deve ir. Diferente de um classificador simples, o YOLO consegue localizar e reconhecer <em>vários objetos ao mesmo tempo</em> em um único frame.</p>
+
+      <div class="block">
+        <h2>Como funciona</h2>
+        <ul>
+          <li>A câmera captura frames de vídeo continuamente (sem precisar apertar botão).</li>
+          <li>Cada frame é redimensionado (letterbox) e enviado ao modelo <code>.onnx</code> carregado de <code>/modelo/yolov8n.onnx</code>.</li>
+          <li>O <strong>ONNX Runtime Web</strong> roda a inferência direto no navegador (WebAssembly) — nenhuma imagem sai do seu dispositivo.</li>
+          <li>As caixas com maior confiança passam por supressão de não-máximos (NMS) e são desenhadas sobre o vídeo.</li>
+        </ul>
+      </div>
+
+      <div class="block">
+        <h2>Tecnologias usadas</h2>
+        <div class="stack">
+          <span>YOLOv8 (Ultralytics)</span>
+          <span>ONNX Runtime Web</span>
+          <span>HTML / CSS / JS puro</span>
+          <span>getUserMedia API</span>
+        </div>
+      </div>
+
+      <div class="block">
+        <h2>Como personalizar</h2>
+        <p class="callout">
+          Exporte seu modelo treinado com <code>yolo export model=best.pt format=onnx</code> e coloque o arquivo em <code>/modelo/yolov8n.onnx</code>. Depois, edite o array <code>CLASS_NAMES</code> no código-fonte com os nomes das classes <strong>na mesma ordem</strong> usada no treino (arquivo <code>data.yaml</code>), e ajuste o <code>CLASS_MAP</code> para ligar cada classe à categoria de descarte correta.
+        </p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+/* =========================================================
+   CONFIGURAÇÃO DO MODELO YOLOv8 (ONNX)
+   ========================================================= */
+const MODEL_PATH = "/modelo/yolov8n.onnx";  // caminho do modelo exportado servido pela aplicação
+const INPUT_SIZE = 640;                    // tamanho de entrada do YOLOv8 (padrão 640x640)
+const CONF_THRESHOLD = 0.45;               // confiança mínima para considerar uma detecção
+const IOU_THRESHOLD = 0.45;                // limiar de sobreposição para o NMS
+const MAX_DETECTIONS = 20;                 // limite de caixas exibidas por frame
+
+// Nomes das classes do YOLOv8 COCO (compatíveis com o modelo exportado).
+const CLASS_NAMES = ["person","bicycle","car","motorbike","aeroplane","bus","train","truck","boat","traffic light","fire hydrant","stop sign","parking meter","bench","bird","cat","dog","horse","sheep","cow","elephant","bear","zebra","giraffe","backpack","umbrella","handbag","tie","suitcase","frisbee","skis","snowboard","sports ball","kite","baseball bat","baseball glove","skateboard","surfboard","tennis racket","bottle","wine glass","cup","fork","knife","spoon","bowl","banana","apple","sandwich","orange","broccoli","carrot","hot dog","pizza","donut","cake","chair","sofa","pottedplant","bed","diningtable","toilet","tvmonitor","laptop","mouse","remote","keyboard","cell phone","microwave","oven","toaster","sink","refrigerator","book","clock","vase","scissors","teddy bear","hair drier","toothbrush"];
+
+ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/";
+ort.env.wasm.numThreads = 1; // evita exigir cabeçalhos COOP/COEP em hospedagens simples
+
+/* =========================================================
+   CATEGORIAS DE DESCARTE (cores oficiais CONAMA 275)
+   ========================================================= */
+const CATEGORIES = {
+  papel:    { label: "Papel / Papelão", color: "var(--papel)",    icon: "📄", ex: ["Jornais e revistas", "Caixas de papelão", "Folhas de caderno", "Envelopes"] },
+  plastico: { label: "Plástico",        color: "var(--plastico)", icon: "🧴", ex: ["Garrafas PET", "Potes e embalagens", "Sacolas plásticas", "Tampas"] },
+  vidro:    { label: "Vidro",           color: "var(--vidro)",    icon: "🍾", ex: ["Garrafas de vidro", "Potes de conserva", "Frascos", "Copos quebrados (embrulhados)"] },
+  metal:    { label: "Metal",           color: "var(--metal)",    icon: "🥫", ex: ["Latas de alumínio", "Latas de aço", "Tampas metálicas", "Panelas velhas"] },
+  organico: { label: "Orgânico",        color: "var(--organico)", icon: "🍃", ex: ["Restos de comida", "Cascas de fruta", "Borra de café", "Folhas e galhos"] },
+  rejeito:  { label: "Rejeito (não reciclável)", color: "var(--rejeito)", icon: "🗑️", ex: ["Papel higiênico usado", "Fraldas", "Cerâmica", "Materiais muito sujos"] },
+  perigoso: { label: "Resíduo perigoso", color: "var(--perigoso)", icon: "⚠️", ex: ["Pilhas e baterias", "Lâmpadas", "Remédios vencidos", "Óleo de cozinha usado"] }
+};
+
+// Liga o nome de classe do SEU modelo YOLOv8 a uma categoria acima.
+const CLASS_MAP = {
+  "person": "rejeito",
+  "bottle": "plastico",
+  "wine glass": "vidro",
+  "cup": "vidro",
+  "fork": "metal",
+  "knife": "metal",
+  "spoon": "metal",
+  "bowl": "organico",
+  "banana": "organico",
+  "apple": "organico",
+  "sandwich": "organico",
+  "orange": "organico",
+  "broccoli": "organico",
+  "carrot": "organico",
+  "hot dog": "organico",
+  "pizza": "organico",
+  "donut": "organico",
+  "cake": "organico",
+  "book": "papel",
+  "cell phone": "rejeito",
+  "keyboard": "rejeito",
+  "mouse": "rejeito",
+  "remote": "rejeito",
+  "tvmonitor": "rejeito",
+  "laptop": "rejeito",
+  "refrigerator": "rejeito",
+  "toaster": "rejeito"
+};
+
+function resolveCategory(className){
+  const key = className.trim().toLowerCase();
+  return CATEGORIES[CLASS_MAP[key]] || null;
+}
+
+/* =========================================================
+   ESTADO / ELEMENTOS
+   ========================================================= */
+let session;          // sessão ONNX Runtime
+let inputName, outputName;
+let stream;
+let running = false;  // câmera ligada
+let paused = false;   // detecção pausada
+let inferring = false; // evita rodar duas inferências ao mesmo tempo
+let rafId = null;
+
+const video = document.getElementById("video");
+const overlay = document.getElementById("overlay");
+const overlayCtx = overlay.getContext("2d");
+const work = document.getElementById("work");     // canvas de trabalho (letterbox 640x640)
+const workCtx = work.getContext("2d");
+
+const toggleCamBtn = document.getElementById("toggleCam");
+const togglePauseBtn = document.getElementById("togglePause");
+const statusText = document.getElementById("statusText");
+const liveBadge = document.getElementById("liveBadge");
+const liveBadgeText = document.getElementById("liveBadgeText");
+
+const resultSwatch = document.getElementById("resultSwatch");
+const resultName = document.getElementById("resultName");
+const resultBin = document.getElementById("resultBin");
+const resultConf = document.getElementById("resultConf");
+const barsEl = document.getElementById("bars");
+
+/* =========================================================
+   TABS
+   ========================================================= */
+document.querySelectorAll(".tab-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("view-" + btn.dataset.tab).classList.add("active");
+  });
+});
+
+/* =========================================================
+   GUIA DE DESCARTE
+   ========================================================= */
+function renderGuide(){
+  const grid = document.getElementById("guideGrid");
+  grid.innerHTML = "";
+  Object.values(CATEGORIES).forEach(cat=>{
+    const card = document.createElement("div");
+    card.className = "guide-card";
+    card.style.borderTopColor = cat.color;
+    card.innerHTML = `
+      <div class="icon">${cat.icon}</div>
+      <h3>${cat.label}</h3>
+      <span class="bin-label">Lixeira ${cat.label.split(" ")[0]}</span>
+      <ul>${cat.ex.map(e=>`<li>${e}</li>`).join("")}</ul>
+    `;
+    grid.appendChild(card);
+  });
+}
+renderGuide();
+
+/* =========================================================
+   CARREGAR MODELO YOLOv8 (ONNX)
+   ========================================================= */
+async function carregarModelo(){
+  statusText.textContent = "Carregando modelo YOLOv8…";
+  session = await ort.InferenceSession.create(MODEL_PATH, { executionProviders: ["wasm"] });
+  inputName = session.inputNames[0];
+  outputName = session.outputNames[0];
+}
+
+/* =========================================================
+   CÂMERA
+   ========================================================= */
+async function ligarCamera(){
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    video.srcObject = stream;
+    await video.play();
+
+    // ajusta a proporção do quadro para bater exatamente com a câmera,
+    // assim o overlay de caixas fica alinhado com a imagem (sem cortes)
+    const frame = document.querySelector(".cam-frame");
+    frame.style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
+    overlay.width = video.videoWidth;
+    overlay.height = video.videoHeight;
+
+    running = true;
+    paused = false;
+
+    toggleCamBtn.textContent = "Desligar câmera";
+    togglePauseBtn.disabled = false;
+    togglePauseBtn.textContent = "Pausar";
+    liveBadge.classList.remove("paused");
+    liveBadgeText.textContent = "AO VIVO";
+    statusText.textContent = "Detectando em tempo real…";
+
+    loopDeDetecao();
+  }catch(err){
+    statusText.textContent = "Não foi possível acessar a câmera: " + err.message;
+  }
+}
+
+function desligarCamera(){
+  if(stream) stream.getTracks().forEach(t=>t.stop());
+  running = false;
+  paused = false;
+  if(rafId) cancelAnimationFrame(rafId);
+  overlayCtx.clearRect(0,0,overlay.width,overlay.height);
+
+  toggleCamBtn.textContent = "Ligar câmera";
+  togglePauseBtn.disabled = true;
+  togglePauseBtn.textContent = "Pausar";
+  liveBadge.classList.add("paused");
+  liveBadgeText.textContent = "CÂMERA PARADA";
+  statusText.textContent = 'Toque em "Ligar câmera" para começar';
+
+  resetResultado();
+}
+
+toggleCamBtn.addEventListener("click", ()=> running ? desligarCamera() : ligarCamera());
+
+togglePauseBtn.addEventListener("click", ()=>{
+  paused = !paused;
+  togglePauseBtn.textContent = paused ? "Retomar" : "Pausar";
+  liveBadge.classList.toggle("paused", paused);
+  liveBadgeText.textContent = paused ? "PAUSADO" : "AO VIVO";
+  statusText.textContent = paused ? "Detecção pausada." : "Detectando em tempo real…";
+  if(paused) overlayCtx.clearRect(0,0,overlay.width,overlay.height);
+});
+
+/* =========================================================
+   LOOP DE DETECÇÃO EM TEMPO REAL
+   (substitui o botão "Capturar" do protótipo original)
+   ========================================================= */
+function loopDeDetecao(){
+  rafId = requestAnimationFrame(loopDeDetecao);
+  if(!running || paused || !session || inferring) return;
+  inferring = true;
+  detectarFrame().finally(()=> inferring = false);
+}
+
+async function detectarFrame(){
+  const vw = video.videoWidth, vh = video.videoHeight;
+  if(!vw || !vh) return;
+
+  // ---- letterbox: redimensiona mantendo proporção, preenchendo com cinza ----
+  const scale = Math.min(INPUT_SIZE / vw, INPUT_SIZE / vh);
+  const newW = Math.round(vw * scale), newH = Math.round(vh * scale);
+  const padX = (INPUT_SIZE - newW) / 2, padY = (INPUT_SIZE - newH) / 2;
+
+  workCtx.fillStyle = "rgb(114,114,114)";
+  workCtx.fillRect(0, 0, INPUT_SIZE, INPUT_SIZE);
+  workCtx.drawImage(video, 0, 0, vw, vh, padX, padY, newW, newH);
+
+  // ---- pré-processamento: HWC -> CHW, normalizado 0..1 ----
+  const { data } = workCtx.getImageData(0, 0, INPUT_SIZE, INPUT_SIZE);
+  const area = INPUT_SIZE * INPUT_SIZE;
+  const chw = new Float32Array(3 * area);
+  for(let i = 0; i < area; i++){
+    chw[i]           = data[i*4]     / 255; // R
+    chw[area + i]     = data[i*4 + 1] / 255; // G
+    chw[2*area + i]   = data[i*4 + 2] / 255; // B
+  }
+  const tensor = new ort.Tensor("float32", chw, [1, 3, INPUT_SIZE, INPUT_SIZE]);
+
+  // ---- inferência ----
+  const results = await session.run({ [inputName]: tensor });
+  const output = results[outputName];
+  const dims = output.dims;           // ex: [1, 4+nc, numAnchors]
+  const nc = dims[1] - 4;
+  const numAnchors = dims[2];
+  const buf = output.data;
+
+  // ---- decodifica as previsões ----
+  const candidates = [];
+  for(let a = 0; a < numAnchors; a++){
+    let bestScore = 0, bestClass = -1;
+    for(let c = 0; c < nc; c++){
+      const s = buf[(4 + c) * numAnchors + a];
+      if(s > bestScore){ bestScore = s; bestClass = c; }
+    }
+    if(bestScore < CONF_THRESHOLD) continue;
+
+    const cx = buf[0 * numAnchors + a];
+    const cy = buf[1 * numAnchors + a];
+    const w  = buf[2 * numAnchors + a];
+    const h  = buf[3 * numAnchors + a];
+
+    // desfaz o letterbox, volta para o espaço de pixels do vídeo
+    const x1 = ((cx - w/2) - padX) / scale;
+    const y1 = ((cy - h/2) - padY) / scale;
+    const x2 = ((cx + w/2) - padX) / scale;
+    const y2 = ((cy + h/2) - padY) / scale;
+
+    candidates.push({
+      x1: Math.max(0, x1), y1: Math.max(0, y1),
+      x2: Math.min(vw, x2), y2: Math.min(vh, y2),
+      score: bestScore,
+      className: CLASS_NAMES[bestClass] || ("classe " + bestClass)
+    });
+  }
+
+  const detections = nms(candidates, IOU_THRESHOLD).slice(0, MAX_DETECTIONS);
+  desenharCaixas(detections, vw, vh);
+  atualizarResultado(detections);
+}
+
+// Non-Maximum Suppression por classe
+function nms(boxes, iouThresh){
+  const byClass = {};
+  boxes.forEach(b => (byClass[b.className] ??= []).push(b));
+
+  const kept = [];
+  Object.values(byClass).forEach(list=>{
+    list.sort((a,b)=> b.score - a.score);
+    const used = new Array(list.length).fill(false);
+    for(let i=0;i<list.length;i++){
+      if(used[i]) continue;
+      kept.push(list[i]);
+      for(let j=i+1;j<list.length;j++){
+        if(used[j]) continue;
+        if(iou(list[i], list[j]) > iouThresh) used[j] = true;
+      }
+    }
+  });
+  return kept.sort((a,b)=> b.score - a.score);
+}
+
+function iou(a, b){
+  const x1 = Math.max(a.x1, b.x1), y1 = Math.max(a.y1, b.y1);
+  const x2 = Math.min(a.x2, b.x2), y2 = Math.min(a.y2, b.y2);
+  const inter = Math.max(0, x2-x1) * Math.max(0, y2-y1);
+  const areaA = (a.x2-a.x1) * (a.y2-a.y1);
+  const areaB = (b.x2-b.x1) * (b.y2-b.y1);
+  return inter / (areaA + areaB - inter + 1e-6);
+}
+
+/* =========================================================
+   DESENHO DAS CAIXAS
+   ========================================================= */
+function desenharCaixas(detections, vw, vh){
+  overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
+  detections.forEach(d=>{
+    const cat = resolveCategory(d.className);
+    const color = cat ? getCssVar(cat.color) : "#6B6E70";
+    overlayCtx.lineWidth = Math.max(2, vw * 0.004);
+    overlayCtx.strokeStyle = color;
+    overlayCtx.strokeRect(d.x1, d.y1, d.x2-d.x1, d.y2-d.y1);
+
+    const label = `${d.className} ${(d.score*100).toFixed(0)}%`;
+    overlayCtx.font = `${Math.max(14, vw*0.02)}px Inter, sans-serif`;
+    const textW = overlayCtx.measureText(label).width + 10;
+    overlayCtx.fillStyle = color;
+    overlayCtx.fillRect(d.x1, Math.max(0, d.y1-22), textW, 22);
+    overlayCtx.fillStyle = "#fff";
+    overlayCtx.fillText(label, d.x1+5, Math.max(14, d.y1-6));
+  });
+}
+
+function getCssVar(varExpr){
+  // varExpr é algo como "var(--plastico)"
+  const name = varExpr.replace("var(", "").replace(")", "");
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+/* =========================================================
+   PAINEL DE RESULTADO
+   ========================================================= */
+function atualizarResultado(detections){
+  if(detections.length === 0){
+    resultName.textContent = "Nenhum objeto reconhecido";
+    resultBin.textContent = "Aponte a câmera para o item";
+    resultConf.textContent = "Objetos detectados: 0";
+    resultSwatch.style.background = "var(--rejeito)";
+    resultSwatch.textContent = "🔍";
+    barsEl.innerHTML = '<div class="empty-hint">Nenhuma detecção acima do limiar de confiança neste frame.</div>';
+    return;
+  }
+
+  const top = detections[0];
+  const cat = resolveCategory(top.className);
+
+  resultName.textContent = top.className;
+  resultConf.textContent = `Objetos detectados: ${detections.length}`;
+
+  if(cat){
+    resultSwatch.style.background = cat.color;
+    resultSwatch.textContent = cat.icon;
+    resultBin.textContent = "Vai para: " + cat.label;
+  }else{
+    resultSwatch.style.background = "var(--rejeito)";
+    resultSwatch.textContent = "❔";
+    resultBin.textContent = "Classe não mapeada — ajuste CLASS_MAP no código";
+  }
+
+  barsEl.innerHTML = "";
+  detections.forEach(d=>{
+    const dCat = resolveCategory(d.className);
+    const row = document.createElement("div");
+    row.className = "bar-row";
+    row.innerHTML = `
+      <div class="bar-label">${d.className}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(d.score*100).toFixed(1)}%; background:${dCat ? dCat.color : "var(--primary)"}"></div></div>
+      <div class="bar-pct">${(d.score*100).toFixed(0)}%</div>
+    `;
+    barsEl.appendChild(row);
+  });
+}
+
+function resetResultado(){
+  resultSwatch.style.background = "var(--rejeito)";
+  resultSwatch.textContent = "♻️";
+  resultName.textContent = "Aguardando câmera…";
+  resultBin.textContent = "—";
+  resultConf.textContent = "Objetos detectados: —";
+  barsEl.innerHTML = '<div class="empty-hint">As detecções em tempo real vão aparecer aqui assim que a câmera for ligada.</div>';
+}
+
+/* =========================================================
+   INICIALIZAÇÃO
+   ========================================================= */
+carregarModelo().then(()=>{
+  statusText.textContent = 'Modelo carregado. Toque em "Ligar câmera" para começar.';
+}).catch(err=>{
+  statusText.textContent = "Erro ao carregar o modelo: " + err.message;
+});
+</script>
+
+</body>
+</html>
