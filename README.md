@@ -28,4 +28,5 @@ nenhuma
 ## Os artigos de orientação que me ajudarão durante o desenvolvimento
  Video de explicação de como implementar a câmera do usuario em HTML(https://www.youtube.com/watch?v=DSTXUEHZRiU&t=28s)
 
-
+## Instruções
+baixe o arquivo e coloque a pasta modelo e o index.html na mesma pasta o yolov8 deve ficar separado pela a pasta modelo do index.html e usar python -m http.server 8000 e depois na url http://localhost:8000
