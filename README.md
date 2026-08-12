@@ -14,13 +14,7 @@
 
 
 ## As bibliotecas que vou usar:
-pip install tensorflow
-pip install flask
-pip install flask-cors
-pip install pillow
-pip install numpy
-pip install opencv-python
-pip install gunicorn
+nenhuma somente yolov8
 
 ## Referências úteis:
 nenhuma
