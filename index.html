@@ -12,6 +12,10 @@
 <!-- ONNX Runtime Web: roda o modelo YOLOv8 (.onnx) direto no navegador -->
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/ort.min.js"></script>
 
+<!-- Three.js: cena 3D da aba "Meio ambiente" -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
 <style>
   :root{
     --bg: #F1F4EE;
@@ -113,6 +117,58 @@
   section.view{ display:none; }
   section.view.active{ display:block; animation: fade .25s ease; }
   @keyframes fade{ from{ opacity:0; transform: translateY(4px);} to{opacity:1; transform:none;} }
+
+  .filter-bar{
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    display:flex;
+    align-items:center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .filter-title{
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+  .filter-chips{
+    display:flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .chip{
+    display:flex;
+    align-items:center;
+    gap: 7px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--ink-soft);
+    padding: 7px 13px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+  }
+  .chip .chip-dot{
+    width: 9px; height:9px; border-radius:50%;
+    background: var(--rejeito);
+    flex-shrink:0;
+  }
+  .chip.active{
+    background: var(--primary-soft);
+    border-color: var(--primary);
+    color: var(--primary-dark);
+  }
+  .chip.all{
+    border-style: dashed;
+  }
 
   .classify-grid{
     display:grid;
@@ -242,6 +298,109 @@
   .about .stack{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
   .about .stack span{ background: var(--primary-soft); color: var(--primary-dark); font-family: var(--font-mono); font-size: 0.76rem; padding: 5px 10px; border-radius: 8px; }
   .about .callout{ background: var(--bg-alt); border-left: 4px solid var(--primary); padding: 14px 16px; border-radius: 8px; font-size: 0.88rem; color: var(--ink); }
+
+  /* ---------- MEIO AMBIENTE (Three.js) ---------- */
+  .three-card{
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 10px;
+    overflow: hidden;
+  }
+  #threeContainer{
+    width: 100%;
+    height: 380px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: radial-gradient(circle at 50% 40%, #12271d, #0a1810);
+    cursor: grab;
+  }
+  #threeContainer:active{ cursor: grabbing; }
+  #threeContainerOcean{
+    width: 100%;
+    height: 380px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: radial-gradient(circle at 50% 40%, #0d2a3d, #061420);
+    cursor: grab;
+  }
+  #threeContainerOcean:active{ cursor: grabbing; }
+  .three-caption{
+    padding: 14px 10px 6px;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    line-height: 1.55;
+  }
+  .three-legend{
+    display:flex;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    padding: 14px 8px 6px;
+  }
+  .three-legend .item{
+    display:flex;
+    align-items:center;
+    gap: 7px;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+  }
+  .three-legend .swatch{
+    width: 10px; height:10px; border-radius: 3px;
+  }
+
+  .tips-list{
+    list-style: none;
+    margin:0; padding:0;
+    display:flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .tips-list li{
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--primary);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 0.9rem;
+    color: var(--ink);
+    line-height: 1.5;
+  }
+
+  /* ---------- PAINEL DE SESSÃO ---------- */
+  .session-panel{
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--line);
+  }
+  .session-header{
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+    margin-bottom: 10px;
+  }
+  button.pill.small{
+    padding: 5px 12px;
+    font-size: 0.76rem;
+  }
+  .session-chips{
+    display:flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .session-chip{
+    display:flex;
+    align-items:center;
+    gap: 6px;
+    background: var(--bg-alt);
+    border-radius: 999px;
+    padding: 5px 11px;
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+  }
+  .session-chip .dot{ width:8px; height:8px; border-radius:50%; }
+  .session-chip .count{ font-family: var(--font-mono); font-weight:600; color: var(--ink); }
 </style>
 </head>
 <body>
@@ -251,6 +410,7 @@
   <nav class="tabs">
     <button class="tab-btn active" data-tab="classificar">Classificar</button>
     <button class="tab-btn" data-tab="guia">Guia de descarte</button>
+    <button class="tab-btn" data-tab="ambiente">Meio ambiente</button>
     <button class="tab-btn" data-tab="sobre">Sobre o projeto</button>
   </nav>
 </header>
@@ -259,6 +419,12 @@
 
   <!-- ===================== ABA: CLASSIFICAR ===================== -->
   <section class="view active" id="view-classificar">
+
+    <div class="filter-bar" id="filterBar">
+      <div class="filter-title">Filtrar classes</div>
+      <div class="filter-chips" id="filterChips"></div>
+    </div>
+
     <div class="classify-grid">
 
       <div class="cam-card">
@@ -293,6 +459,14 @@
         <div class="bars" id="bars">
           <div class="empty-hint">As detecções em tempo real vão aparecer aqui assim que a câmera for ligada.</div>
         </div>
+
+        <div class="session-panel">
+          <div class="session-header">
+            <span>Detecções acumuladas nesta sessão</span>
+            <button class="pill secondary small" id="resetSession">Zerar</button>
+          </div>
+          <div class="session-chips" id="sessionChips"></div>
+        </div>
       </div>
 
     </div>
@@ -307,6 +481,42 @@
     <div class="guide-grid" id="guideGrid"></div>
   </section>
 
+  <!-- ===================== ABA: MEIO AMBIENTE ===================== -->
+  <section class="view" id="view-ambiente">
+    <div class="guide-intro">
+      <h1>O planeta e o seu lixo</h1>
+      <p>Cada categoria de resíduo tem um destino — e um tempo de impacto muito diferente na natureza quando descartada errado. Arraste para girar o planeta.</p>
+    </div>
+
+    <div class="three-card">
+      <div id="threeContainer"></div>
+      <div class="three-legend" id="threeLegend"></div>
+    </div>
+
+    <div class="guide-intro" style="margin-top:34px;">
+      <h1>Lixo nos oceanos</h1>
+      <p>Boa parte do plástico descartado errado acaba levado por rios até o mar, onde correntes marítimas concentram os fragmentos em grandes manchas flutuantes — as chamadas ilhas de lixo. Arraste para explorar o globo.</p>
+    </div>
+
+    <div class="three-card">
+      <div id="threeContainerOcean"></div>
+      <div class="three-caption">
+        Os pontinhos representam fragmentos de plástico acumulados pelas correntes oceânicas em zonas de convergência. Diferente de resíduo orgânico, o plástico não desaparece: ele se quebra em pedaços cada vez menores — os microplásticos — que permanecem na água e entram na cadeia alimentar marinha.
+      </div>
+    </div>
+
+    <div class="guide-intro" style="margin-top:34px;">
+      <h1>Tempo de decomposição na natureza</h1>
+      <p>Estimativas aproximadas — variam conforme o material exato e as condições do ambiente (sol, umidade, solo).</p>
+    </div>
+    <div class="guide-grid" id="decompGrid"></div>
+
+    <div class="guide-intro" style="margin-top:34px;">
+      <h1>Boas práticas</h1>
+    </div>
+    <ul class="tips-list" id="tipsList"></ul>
+  </section>
+
   <!-- ===================== ABA: SOBRE O PROJETO ===================== -->
   <section class="view" id="view-sobre">
     <div class="about">
@@ -317,7 +527,7 @@
         <h2>Como funciona</h2>
         <ul>
           <li>A câmera captura frames de vídeo continuamente (sem precisar apertar botão).</li>
-          <li>Cada frame é redimensionado (letterbox) e enviado ao modelo <code>.onnx</code> carregado de <code>/modelo/yolov8n.onnx</code>.</li>
+          <li>Cada frame é redimensionado (letterbox) e enviado ao modelo <code>.onnx</code> carregado de <code>./modelo/best.onnx</code>.</li>
           <li>O <strong>ONNX Runtime Web</strong> roda a inferência direto no navegador (WebAssembly) — nenhuma imagem sai do seu dispositivo.</li>
           <li>As caixas com maior confiança passam por supressão de não-máximos (NMS) e são desenhadas sobre o vídeo.</li>
         </ul>
@@ -336,7 +546,7 @@
       <div class="block">
         <h2>Como personalizar</h2>
         <p class="callout">
-          Exporte seu modelo treinado com <code>yolo export model=best.pt format=onnx</code> e coloque o arquivo em <code>/modelo/yolov8n.onnx</code>. Depois, edite o array <code>CLASS_NAMES</code> no código-fonte com os nomes das classes <strong>na mesma ordem</strong> usada no treino (arquivo <code>data.yaml</code>), e ajuste o <code>CLASS_MAP</code> para ligar cada classe à categoria de descarte correta.
+          Exporte seu modelo treinado com <code>yolo export model=best.pt format=onnx</code> e coloque o arquivo em <code>./modelo/best.onnx</code>. Depois, edite o array <code>CLASS_NAMES</code> no código-fonte com os nomes das classes <strong>na mesma ordem</strong> usada no treino (arquivo <code>data.yaml</code>), e ajuste o <code>CLASS_MAP</code> para ligar cada classe à categoria de descarte correta.
         </p>
       </div>
     </div>
@@ -348,14 +558,15 @@
 /* =========================================================
    CONFIGURAÇÃO DO MODELO YOLOv8 (ONNX)
    ========================================================= */
-const MODEL_PATH = "/modelo/yolov8n.onnx";  // caminho do modelo exportado servido pela aplicação
+const MODEL_PATH = "./modelo/best.onnx";  // caminho do seu modelo exportado
 const INPUT_SIZE = 640;                    // tamanho de entrada do YOLOv8 (padrão 640x640)
 const CONF_THRESHOLD = 0.45;               // confiança mínima para considerar uma detecção
 const IOU_THRESHOLD = 0.45;                // limiar de sobreposição para o NMS
 const MAX_DETECTIONS = 20;                 // limite de caixas exibidas por frame
 
-// Nomes das classes do YOLOv8 COCO (compatíveis com o modelo exportado).
-const CLASS_NAMES = ["person","bicycle","car","motorbike","aeroplane","bus","train","truck","boat","traffic light","fire hydrant","stop sign","parking meter","bench","bird","cat","dog","horse","sheep","cow","elephant","bear","zebra","giraffe","backpack","umbrella","handbag","tie","suitcase","frisbee","skis","snowboard","sports ball","kite","baseball bat","baseball glove","skateboard","surfboard","tennis racket","bottle","wine glass","cup","fork","knife","spoon","bowl","banana","apple","sandwich","orange","broccoli","carrot","hot dog","pizza","donut","cake","chair","sofa","pottedplant","bed","diningtable","toilet","tvmonitor","laptop","mouse","remote","keyboard","cell phone","microwave","oven","toaster","sink","refrigerator","book","clock","vase","scissors","teddy bear","hair drier","toothbrush"];
+// Nomes das classes NA MESMA ORDEM do treino (data.yaml -> names).
+// Ajuste esta lista para bater exatamente com o seu modelo.
+const CLASS_NAMES = ["papel", "plastico", "vidro", "metal", "organico", "rejeito"];
 
 ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/";
 ort.env.wasm.numThreads = 1; // evita exigir cabeçalhos COOP/COEP em hospedagens simples
@@ -364,44 +575,24 @@ ort.env.wasm.numThreads = 1; // evita exigir cabeçalhos COOP/COEP em hospedagen
    CATEGORIAS DE DESCARTE (cores oficiais CONAMA 275)
    ========================================================= */
 const CATEGORIES = {
-  papel:    { label: "Papel / Papelão", color: "var(--papel)",    icon: "📄", ex: ["Jornais e revistas", "Caixas de papelão", "Folhas de caderno", "Envelopes"] },
-  plastico: { label: "Plástico",        color: "var(--plastico)", icon: "🧴", ex: ["Garrafas PET", "Potes e embalagens", "Sacolas plásticas", "Tampas"] },
-  vidro:    { label: "Vidro",           color: "var(--vidro)",    icon: "🍾", ex: ["Garrafas de vidro", "Potes de conserva", "Frascos", "Copos quebrados (embrulhados)"] },
-  metal:    { label: "Metal",           color: "var(--metal)",    icon: "🥫", ex: ["Latas de alumínio", "Latas de aço", "Tampas metálicas", "Panelas velhas"] },
-  organico: { label: "Orgânico",        color: "var(--organico)", icon: "🍃", ex: ["Restos de comida", "Cascas de fruta", "Borra de café", "Folhas e galhos"] },
-  rejeito:  { label: "Rejeito (não reciclável)", color: "var(--rejeito)", icon: "🗑️", ex: ["Papel higiênico usado", "Fraldas", "Cerâmica", "Materiais muito sujos"] },
-  perigoso: { label: "Resíduo perigoso", color: "var(--perigoso)", icon: "⚠️", ex: ["Pilhas e baterias", "Lâmpadas", "Remédios vencidos", "Óleo de cozinha usado"] }
+  papel:    { label: "Papel / Papelão", color: "var(--papel)",    icon: "📄", decompose: "3 a 6 meses", ex: ["Jornais e revistas", "Caixas de papelão", "Folhas de caderno", "Envelopes"] },
+  plastico: { label: "Plástico",        color: "var(--plastico)", icon: "🧴", decompose: "Cerca de 450 anos", ex: ["Garrafas PET", "Potes e embalagens", "Sacolas plásticas", "Tampas"] },
+  vidro:    { label: "Vidro",           color: "var(--vidro)",    icon: "🍾", decompose: "Mais de 1000 anos", ex: ["Garrafas de vidro", "Potes de conserva", "Frascos", "Copos quebrados (embrulhados)"] },
+  metal:    { label: "Metal",           color: "var(--metal)",    icon: "🥫", decompose: "200 a 500 anos", ex: ["Latas de alumínio", "Latas de aço", "Tampas metálicas", "Panelas velhas"] },
+  organico: { label: "Orgânico",        color: "var(--organico)", icon: "🍃", decompose: "2 a 6 meses", ex: ["Restos de comida", "Cascas de fruta", "Borra de café", "Folhas e galhos"] },
+  rejeito:  { label: "Rejeito (não reciclável)", color: "var(--rejeito)", icon: "🗑️", decompose: "Varia muito", ex: ["Papel higiênico usado", "Fraldas", "Cerâmica", "Materiais muito sujos"] },
+  perigoso: { label: "Resíduo perigoso", color: "var(--perigoso)", icon: "⚠️", decompose: "Indeterminado / contamina solo e água", ex: ["Pilhas e baterias", "Lâmpadas", "Remédios vencidos", "Óleo de cozinha usado"] }
 };
 
 // Liga o nome de classe do SEU modelo YOLOv8 a uma categoria acima.
 const CLASS_MAP = {
-  "person": "rejeito",
-  "bottle": "plastico",
-  "wine glass": "vidro",
-  "cup": "vidro",
-  "fork": "metal",
-  "knife": "metal",
-  "spoon": "metal",
-  "bowl": "organico",
-  "banana": "organico",
-  "apple": "organico",
-  "sandwich": "organico",
-  "orange": "organico",
-  "broccoli": "organico",
-  "carrot": "organico",
-  "hot dog": "organico",
-  "pizza": "organico",
-  "donut": "organico",
-  "cake": "organico",
-  "book": "papel",
-  "cell phone": "rejeito",
-  "keyboard": "rejeito",
-  "mouse": "rejeito",
-  "remote": "rejeito",
-  "tvmonitor": "rejeito",
-  "laptop": "rejeito",
-  "refrigerator": "rejeito",
-  "toaster": "rejeito"
+  "papel": "papel", "papelao": "papel",
+  "plastico": "plastico", "pet": "plastico",
+  "vidro": "vidro",
+  "metal": "metal", "lata": "metal", "aluminio": "metal",
+  "organico": "organico",
+  "rejeito": "rejeito", "outros": "rejeito",
+  "perigoso": "perigoso", "pilha": "perigoso", "bateria": "perigoso"
 };
 
 function resolveCategory(className){
@@ -439,6 +630,49 @@ const resultConf = document.getElementById("resultConf");
 const barsEl = document.getElementById("bars");
 
 /* =========================================================
+   FILTRO DE CLASSES
+   Controla quais classes o modelo deve considerar ao detectar.
+   ========================================================= */
+let activeClassIndices = new Set(CLASS_NAMES.map((_, i) => i)); // começa com todas ligadas
+
+function renderFilterUI(){
+  const chips = document.getElementById("filterChips");
+  chips.innerHTML = "";
+
+  const allChip = document.createElement("div");
+  allChip.className = "chip all active";
+  allChip.textContent = "Todas";
+  allChip.addEventListener("click", ()=>{
+    const allSelected = activeClassIndices.size === CLASS_NAMES.length;
+    activeClassIndices = new Set(allSelected ? [] : CLASS_NAMES.map((_, i) => i));
+    renderFilterUI();
+  });
+  chips.appendChild(allChip);
+
+  CLASS_NAMES.forEach((name, idx)=>{
+    const cat = resolveCategory(name);
+    const chip = document.createElement("div");
+    chip.className = "chip" + (activeClassIndices.has(idx) ? " active" : "");
+    chip.innerHTML = `<span class="chip-dot" style="background:${cat ? cat.color : "var(--rejeito)"}"></span>${name}`;
+    chip.addEventListener("click", ()=>{
+      if(activeClassIndices.has(idx)) activeClassIndices.delete(idx);
+      else activeClassIndices.add(idx);
+      renderFilterUI();
+    });
+    chips.appendChild(chip);
+  });
+
+  allChip.classList.toggle("active", activeClassIndices.size === CLASS_NAMES.length);
+
+  if(activeClassIndices.size === 0){
+    statusText.textContent = "Selecione ao menos uma classe no filtro para detectar.";
+  }else if(running && !paused){
+    statusText.textContent = "Detectando em tempo real…";
+  }
+}
+renderFilterUI();
+
+/* =========================================================
    TABS
    ========================================================= */
 document.querySelectorAll(".tab-btn").forEach(btn=>{
@@ -447,6 +681,10 @@ document.querySelectorAll(".tab-btn").forEach(btn=>{
     document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
     btn.classList.add("active");
     document.getElementById("view-" + btn.dataset.tab).classList.add("active");
+    if(btn.dataset.tab === "ambiente"){
+      initThreeScene();
+      initOceanScene();
+    }
   });
 });
 
@@ -470,6 +708,42 @@ function renderGuide(){
   });
 }
 renderGuide();
+
+/* =========================================================
+   TEMPO DE DECOMPOSIÇÃO
+   ========================================================= */
+function renderDecomposition(){
+  const grid = document.getElementById("decompGrid");
+  grid.innerHTML = "";
+  Object.values(CATEGORIES).forEach(cat=>{
+    const card = document.createElement("div");
+    card.className = "guide-card";
+    card.style.borderTopColor = cat.color;
+    card.innerHTML = `
+      <div class="icon">${cat.icon}</div>
+      <h3>${cat.label}</h3>
+      <span class="bin-label" style="color:${getCssVar(cat.color)}">${cat.decompose}</span>
+    `;
+    grid.appendChild(card);
+  });
+}
+renderDecomposition();
+
+/* =========================================================
+   DICAS DE BOAS PRÁTICAS
+   ========================================================= */
+const TIPS = [
+  "Separe o lixo reciclável do orgânico e do rejeito antes de descartar — isso evita que tudo vire rejeito misturado no aterro.",
+  "Lave rapidamente embalagens com restos de comida ou gordura antes de descartar; resíduo sujo contamina o restante do material reciclável.",
+  "Nunca jogue pilhas, baterias, lâmpadas ou eletrônicos no lixo comum — leve a pontos de coleta específicos.",
+  "Prefira reduzir e reutilizar antes de reciclar: uma garrafa reutilizável evita dezenas de descartáveis por ano.",
+  "Óleo de cozinha usado nunca deve ir para a pia ou o lixo comum — pode contaminar grandes volumes de água."
+];
+function renderTips(){
+  const list = document.getElementById("tipsList");
+  list.innerHTML = TIPS.map(t => `<li>${t}</li>`).join("");
+}
+renderTips();
 
 /* =========================================================
    CARREGAR MODELO YOLOv8 (ONNX)
@@ -584,11 +858,17 @@ async function detectarFrame(){
   const numAnchors = dims[2];
   const buf = output.data;
 
-  // ---- decodifica as previsões ----
+  // ---- decodifica as previsões (apenas classes ativas no filtro) ----
   const candidates = [];
+  if(activeClassIndices.size === 0){
+    desenharCaixas([], vw, vh);
+    atualizarResultado([]);
+    return;
+  }
   for(let a = 0; a < numAnchors; a++){
     let bestScore = 0, bestClass = -1;
     for(let c = 0; c < nc; c++){
+      if(!activeClassIndices.has(c)) continue;
       const s = buf[(4 + c) * numAnchors + a];
       if(s > bestScore){ bestScore = s; bestClass = c; }
     }
@@ -692,6 +972,7 @@ function atualizarResultado(detections){
 
   const top = detections[0];
   const cat = resolveCategory(top.className);
+  registrarDeteccoesNaSessao(detections);
 
   resultName.textContent = top.className;
   resultConf.textContent = `Objetos detectados: ${detections.length}`;
@@ -728,6 +1009,282 @@ function resetResultado(){
   resultConf.textContent = "Objetos detectados: —";
   barsEl.innerHTML = '<div class="empty-hint">As detecções em tempo real vão aparecer aqui assim que a câmera for ligada.</div>';
 }
+
+/* =========================================================
+   CENA 3D (Three.js) — planeta + categorias orbitando
+   ========================================================= */
+let threeInitialized = false;
+
+function initThreeScene(){
+  if(threeInitialized) return;
+  threeInitialized = true;
+
+  const container = document.getElementById("threeContainer");
+  const w = container.clientWidth, h = container.clientHeight;
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+  camera.position.set(0, 2.4, 8.5);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(w, h);
+  container.appendChild(renderer.domElement);
+
+  // luzes
+  scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+  const sun = new THREE.DirectionalLight(0xfff2d0, 1.1);
+  sun.position.set(5, 6, 4);
+  scene.add(sun);
+  const rim = new THREE.PointLight(0x2f6b4f, 0.8);
+  rim.position.set(-6, -2, -4);
+  scene.add(rim);
+
+  // planeta (baixo-poli, oceano + continentes)
+  const planet = new THREE.Group();
+  const ocean = new THREE.Mesh(
+    new THREE.IcosahedronGeometry(2.1, 2),
+    new THREE.MeshStandardMaterial({ color: 0x1f5c8a, flatShading: true, roughness: 0.75 })
+  );
+  planet.add(ocean);
+  const land = new THREE.Mesh(
+    new THREE.IcosahedronGeometry(2.14, 1),
+    new THREE.MeshStandardMaterial({ color: 0x3f8f5c, flatShading: true, roughness: 0.9, wireframe: false })
+  );
+  land.scale.set(0.62, 0.62, 0.62);
+  land.position.set(0.9, 0.5, 1.1);
+  planet.add(land);
+  const land2 = land.clone();
+  land2.position.set(-1.1, -0.6, -0.8);
+  land2.scale.set(0.5, 0.5, 0.5);
+  planet.add(land2);
+  scene.add(planet);
+
+  // categorias orbitando o planeta
+  const orbitGroup = new THREE.Group();
+  scene.add(orbitGroup);
+
+  const categoryColors = Object.values(CATEGORIES).map(c => getCssVar(c.color));
+  const orbitMeshes = [];
+  const radius = 3.6;
+  categoryColors.forEach((hex, i)=>{
+    const angle = (i / categoryColors.length) * Math.PI * 2;
+    const geo = new THREE.IcosahedronGeometry(0.28, 0);
+    const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(hex), flatShading: true, roughness: 0.5, metalness: 0.1 });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(Math.cos(angle) * radius, Math.sin(i * 1.7) * 0.8, Math.sin(angle) * radius);
+    mesh.userData.angle = angle;
+    mesh.userData.yOffset = i;
+    orbitGroup.add(mesh);
+    orbitMeshes.push(mesh);
+  });
+
+  // controles (arrastar para girar)
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.enablePan = false;
+  controls.minDistance = 5;
+  controls.maxDistance = 13;
+  controls.autoRotate = true;
+  controls.autoRotateSpeed = 0.6;
+
+  function animate(t){
+    requestAnimationFrame(animate);
+    planet.rotation.y += 0.0025;
+    orbitMeshes.forEach((mesh, i)=>{
+      const a = mesh.userData.angle + t * 0.00025;
+      mesh.position.x = Math.cos(a) * radius;
+      mesh.position.z = Math.sin(a) * radius;
+      mesh.position.y = Math.sin(t * 0.0006 + mesh.userData.yOffset) * 0.7;
+      mesh.rotation.x += 0.01;
+      mesh.rotation.y += 0.01;
+    });
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  requestAnimationFrame(animate);
+
+  window.addEventListener("resize", ()=>{
+    const nw = container.clientWidth, nh = container.clientHeight;
+    if(nw === 0 || nh === 0) return;
+    camera.aspect = nw / nh;
+    camera.updateProjectionMatrix();
+    renderer.setSize(nw, nh);
+  });
+
+  // legenda
+  const legend = document.getElementById("threeLegend");
+  legend.innerHTML = Object.values(CATEGORIES).map((cat, i)=>`
+    <div class="item"><span class="swatch" style="background:${categoryColors[i]}"></span>${cat.label}</div>
+  `).join("");
+}
+
+/* =========================================================
+   CENA 3D (Three.js) — globo com manchas de lixo no oceano
+   ========================================================= */
+let oceanInitialized = false;
+
+function initOceanScene(){
+  if(oceanInitialized) return;
+  oceanInitialized = true;
+
+  const container = document.getElementById("threeContainerOcean");
+  const w = container.clientWidth, h = container.clientHeight;
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+  camera.position.set(0, 1.6, 8);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(w, h);
+  container.appendChild(renderer.domElement);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const sun = new THREE.DirectionalLight(0xdfeeff, 1.1);
+  sun.position.set(4, 5, 5);
+  scene.add(sun);
+  const rim = new THREE.PointLight(0x1f5c8a, 0.9);
+  rim.position.set(-6, -2, -3);
+  scene.add(rim);
+
+  // globo majoritariamente oceânico
+  const globe = new THREE.Group();
+  const ocean = new THREE.Mesh(
+    new THREE.IcosahedronGeometry(2.2, 3),
+    new THREE.MeshStandardMaterial({ color: 0x1c5f8f, flatShading: true, roughness: 0.65, metalness: 0.05 })
+  );
+  globe.add(ocean);
+
+  // continentes pequenos, só para dar referência geográfica
+  const landMat = new THREE.MeshStandardMaterial({ color: 0x3f8f5c, flatShading: true, roughness: 0.9 });
+  const landPositions = [
+    { pos: [1.6, 0.6, 1.0], scale: 0.55 },
+    { pos: [-1.3, -0.4, 1.3], scale: 0.4 },
+    { pos: [-0.4, 1.4, -1.3], scale: 0.45 },
+    { pos: [1.2, -1.2, -1.1], scale: 0.35 }
+  ];
+  landPositions.forEach(l=>{
+    const land = new THREE.Mesh(new THREE.IcosahedronGeometry(2.24, 1), landMat);
+    land.scale.setScalar(l.scale);
+    land.position.set(...l.pos);
+    globe.add(land);
+  });
+  scene.add(globe);
+
+  // manchas de lixo plástico: clusters de fragmentos flutuando na "superfície"
+  const debrisGroup = new THREE.Group();
+  scene.add(debrisGroup);
+
+  const debrisColors = [0xe4e0d6, 0xc0392b, 0x9aa5ab, 0xd9a824, 0xf2f2f2];
+  const debrisRadius = 2.34;
+
+  // centros das manchas (regiões de convergência oceânica, estilizadas)
+  const patchCenters = [
+    { lat: 0.35, lon: -2.1, spread: 0.55, count: 55 },  // Pacífico Norte
+    { lat: -0.15, lon: 0.9, spread: 0.4, count: 30 },   // Atlântico
+    { lat: 0.55, lon: 2.4, spread: 0.35, count: 22 }    // Índico
+  ];
+
+  const debrisMeshes = [];
+  patchCenters.forEach(patch=>{
+    for(let i=0; i<patch.count; i++){
+      const lat = patch.lat + (Math.random()-0.5) * patch.spread;
+      const lon = patch.lon + (Math.random()-0.5) * patch.spread * 1.6;
+      const size = 0.03 + Math.random()*0.05;
+      const geo = Math.random() > 0.5
+        ? new THREE.BoxGeometry(size, size*0.4, size)
+        : new THREE.IcosahedronGeometry(size*0.6, 0);
+      const mat = new THREE.MeshStandardMaterial({
+        color: debrisColors[Math.floor(Math.random()*debrisColors.length)],
+        flatShading: true, roughness: 0.8
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+
+      const x = debrisRadius * Math.cos(lat) * Math.cos(lon);
+      const y = debrisRadius * Math.sin(lat);
+      const z = debrisRadius * Math.cos(lat) * Math.sin(lon);
+      mesh.position.set(x, y, z);
+      mesh.lookAt(0,0,0);
+      mesh.userData.baseLat = lat;
+      mesh.userData.baseLon = lon;
+      mesh.userData.bobOffset = Math.random() * Math.PI * 2;
+      debrisGroup.add(mesh);
+      debrisMeshes.push(mesh);
+    }
+  });
+
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.enablePan = false;
+  controls.minDistance = 4.5;
+  controls.maxDistance = 12;
+  controls.autoRotate = true;
+  controls.autoRotateSpeed = 0.5;
+
+  function animate(t){
+    requestAnimationFrame(animate);
+    globe.rotation.y += 0.0012;
+    debrisGroup.rotation.y += 0.0012; // acompanha a rotação do globo
+    debrisMeshes.forEach(mesh=>{
+      const bob = Math.sin(t * 0.001 + mesh.userData.bobOffset) * 0.02;
+      const lat = mesh.userData.baseLat;
+      const lon = mesh.userData.baseLon;
+      const r = debrisRadius + bob;
+      mesh.position.set(
+        r * Math.cos(lat) * Math.cos(lon),
+        r * Math.sin(lat),
+        r * Math.cos(lat) * Math.sin(lon)
+      );
+      mesh.rotation.x += 0.004;
+      mesh.rotation.z += 0.004;
+    });
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  requestAnimationFrame(animate);
+
+  window.addEventListener("resize", ()=>{
+    const nw = container.clientWidth, nh = container.clientHeight;
+    if(nw === 0 || nh === 0) return;
+    camera.aspect = nw / nh;
+    camera.updateProjectionMatrix();
+    renderer.setSize(nw, nh);
+  });
+}
+
+/* =========================================================
+   CONTADORES DA SESSÃO
+   ========================================================= */
+const sessionCounts = {};
+function registrarDeteccoesNaSessao(detections){
+  detections.forEach(d=>{
+    const cat = resolveCategory(d.className);
+    const key = cat ? cat.label : d.className;
+    sessionCounts[key] = (sessionCounts[key] || 0) + 1;
+  });
+  renderSessionChips();
+}
+function renderSessionChips(){
+  const el = document.getElementById("sessionChips");
+  const entries = Object.entries(sessionCounts);
+  if(entries.length === 0){
+    el.innerHTML = '<span class="empty-hint" style="padding:0;">Nenhuma detecção registrada ainda.</span>';
+    return;
+  }
+  el.innerHTML = entries.map(([label, count])=>{
+    const match = Object.values(CATEGORIES).find(c => c.label === label);
+    const color = match ? getCssVar(match.color) : getCssVar("var(--rejeito)");
+    return `<span class="session-chip"><span class="dot" style="background:${color}"></span>${label} <span class="count">${count}</span></span>`;
+  }).join("");
+}
+document.getElementById("resetSession").addEventListener("click", ()=>{
+  Object.keys(sessionCounts).forEach(k => delete sessionCounts[k]);
+  renderSessionChips();
+});
+renderSessionChips();
 
 /* =========================================================
    INICIALIZAÇÃO
