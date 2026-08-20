@@ -108,6 +108,23 @@
     color: var(--ink);
   }
 
+  .author-link{
+    display:flex;
+    align-items:center;
+    gap: 4px;
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    text-decoration: none;
+    white-space: nowrap;
+    padding: 6px 10px;
+    border-radius: 999px;
+    transition: background .15s ease, color .15s ease;
+  }
+  .author-link span{ font-weight:600; color: var(--ink); }
+  .author-link:hover{ background: var(--bg-alt); color: var(--primary-dark); }
+  .author-link:hover span{ color: var(--primary-dark); }
+
   main{
     max-width: 1080px;
     margin: 0 auto;
@@ -298,6 +315,18 @@
   .about .stack{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
   .about .stack span{ background: var(--primary-soft); color: var(--primary-dark); font-family: var(--font-mono); font-size: 0.76rem; padding: 5px 10px; border-radius: 8px; }
   .about .callout{ background: var(--bg-alt); border-left: 4px solid var(--primary); padding: 14px 16px; border-radius: 8px; font-size: 0.88rem; color: var(--ink); }
+  .about .repo-link{
+    display:inline-block;
+    margin-top: 6px;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: var(--primary-dark);
+    background: var(--primary-soft);
+    padding: 8px 14px;
+    border-radius: 8px;
+    text-decoration: none;
+  }
+  .about .repo-link:hover{ background: var(--line); }
 
   /* ---------- MEIO AMBIENTE (Three.js) ---------- */
   .three-card{
@@ -413,6 +442,9 @@
     <button class="tab-btn" data-tab="ambiente">Meio ambiente</button>
     <button class="tab-btn" data-tab="sobre">Sobre o projeto</button>
   </nav>
+  <a class="author-link" href="https://github.com/rafaelndegouveia17-png/Mudancasclimaticas" target="_blank" rel="noopener noreferrer">
+    <span>Rafael</span> · GitHub ↗
+  </a>
 </header>
 
 <main>
@@ -549,6 +581,14 @@
           Exporte seu modelo treinado com <code>yolo export model=best.pt format=onnx</code> e coloque o arquivo em <code>./modelo/best.onnx</code>. Depois, edite o array <code>CLASS_NAMES</code> no código-fonte com os nomes das classes <strong>na mesma ordem</strong> usada no treino (arquivo <code>data.yaml</code>), e ajuste o <code>CLASS_MAP</code> para ligar cada classe à categoria de descarte correta.
         </p>
       </div>
+
+      <div class="block">
+        <h2>Autoria</h2>
+        <p>Projeto desenvolvido por <strong>Rafael</strong>. Código-fonte, histórico e outras iniciativas ligadas a mudanças climáticas estão no repositório do GitHub.</p>
+        <a class="repo-link" href="https://github.com/rafaelndegouveia17-png/Mudancasclimaticas" target="_blank" rel="noopener noreferrer">
+          github.com/rafaelndegouveia17-png/Mudancasclimaticas ↗
+        </a>
+      </div>
     </div>
   </section>
 
@@ -565,8 +605,29 @@ const IOU_THRESHOLD = 0.45;                // limiar de sobreposição para o NM
 const MAX_DETECTIONS = 20;                 // limite de caixas exibidas por frame
 
 // Nomes das classes NA MESMA ORDEM do treino (data.yaml -> names).
-// Ajuste esta lista para bater exatamente com o seu modelo.
-const CLASS_NAMES = ["papel", "plastico", "vidro", "metal", "organico", "rejeito"];
+//
+// IMPORTANTE: se o seu modelo (best.onnx) ainda é o YOLOv8 "de fábrica"
+// (pré-treinado no dataset COCO, com 80 classes gerais), use a lista COCO
+// abaixo — ela já vem pronta. É o caso mais comum de o site rotular uma
+// PESSOA como "papel": o modelo detecta a classe 0 (person), mas se
+// CLASS_NAMES só tiver 6 nomes, o índice 0 vira "papel" por engano.
+//
+// Quando você treinar seu próprio modelo com as classes de lixo
+// (papel, plástico, vidro...), troque esta lista pelas classes do SEU
+// treino, na mesma ordem do data.yaml — por exemplo:
+// const CLASS_NAMES = ["papel", "plastico", "vidro", "metal", "organico", "rejeito"];
+const CLASS_NAMES = [
+  "person","bicycle","car","motorcycle","airplane","bus","train","truck","boat",
+  "traffic light","fire hydrant","stop sign","parking meter","bench","bird","cat","dog",
+  "horse","sheep","cow","elephant","bear","zebra","giraffe","backpack","umbrella","handbag",
+  "tie","suitcase","frisbee","skis","snowboard","sports ball","kite","baseball bat",
+  "baseball glove","skateboard","surfboard","tennis racket","bottle","wine glass","cup",
+  "fork","knife","spoon","bowl","banana","apple","sandwich","orange","broccoli","carrot",
+  "hot dog","pizza","donut","cake","chair","couch","potted plant","bed","dining table",
+  "toilet","tv","laptop","mouse","remote","keyboard","cell phone","microwave","oven",
+  "toaster","sink","refrigerator","book","clock","vase","scissors","teddy bear",
+  "hair drier","toothbrush"
+];
 
 ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/";
 ort.env.wasm.numThreads = 1; // evita exigir cabeçalhos COOP/COEP em hospedagens simples
@@ -585,7 +646,24 @@ const CATEGORIES = {
 };
 
 // Liga o nome de classe do SEU modelo YOLOv8 a uma categoria acima.
+// Classes que não têm relação clara com descarte (person, car, dog, chair...)
+// ficam de propósito FORA deste mapa: elas continuam sendo detectadas e
+// desenhadas na tela, só não recebem (nem inventam) uma lixeira errada.
 const CLASS_MAP = {
+  // objetos comuns do dataset COCO com destino claro
+  "bottle": "plastico", "cup": "plastico",
+  "wine glass": "vidro", "vase": "vidro",
+  "fork": "metal", "knife": "metal", "spoon": "metal", "scissors": "metal",
+  "banana": "organico", "apple": "organico", "orange": "organico", "sandwich": "organico",
+  "broccoli": "organico", "carrot": "organico", "hot dog": "organico", "pizza": "organico",
+  "donut": "organico", "cake": "organico",
+  "book": "papel",
+  "cell phone": "perigoso", "laptop": "perigoso", "mouse": "perigoso", "remote": "perigoso",
+  "keyboard": "perigoso", "tv": "perigoso", "microwave": "perigoso", "toaster": "perigoso",
+  "hair drier": "perigoso",
+  "toothbrush": "rejeito",
+
+  // caso você já use as classes do seu próprio treino de lixo
   "papel": "papel", "papelao": "papel",
   "plastico": "plastico", "pet": "plastico",
   "vidro": "vidro",
@@ -631,45 +709,67 @@ const barsEl = document.getElementById("bars");
 
 /* =========================================================
    FILTRO DE CLASSES
-   Controla quais classes o modelo deve considerar ao detectar.
+   Filtra por CATEGORIA DE DESCARTE (não pela classe crua do
+   modelo — com uma lista COCO de 80 classes não faria sentido
+   ter um chip pra cada uma). "Outras" agrupa qualquer classe
+   detectada que não tenha categoria mapeada em CLASS_MAP.
    ========================================================= */
-let activeClassIndices = new Set(CLASS_NAMES.map((_, i) => i)); // começa com todas ligadas
+const FILTER_GROUPS = [...Object.keys(CATEGORIES), "outras"];
+let activeCategoryKeys = new Set(FILTER_GROUPS); // começa com tudo ligado
+
+// índices de CLASS_NAMES permitidos pelo filtro atual (recalculado a cada mudança)
+let activeClassIndices = new Set(CLASS_NAMES.map((_, i) => i));
+
+function recomputeActiveClassIndices(){
+  activeClassIndices = new Set();
+  CLASS_NAMES.forEach((name, idx)=>{
+    const cat = resolveCategory(name);
+    const key = cat ? Object.keys(CATEGORIES).find(k => CATEGORIES[k] === cat) : "outras";
+    if(activeCategoryKeys.has(key)) activeClassIndices.add(idx);
+  });
+}
 
 function renderFilterUI(){
   const chips = document.getElementById("filterChips");
   chips.innerHTML = "";
 
   const allChip = document.createElement("div");
-  allChip.className = "chip all active";
+  allChip.className = "chip all";
   allChip.textContent = "Todas";
   allChip.addEventListener("click", ()=>{
-    const allSelected = activeClassIndices.size === CLASS_NAMES.length;
-    activeClassIndices = new Set(allSelected ? [] : CLASS_NAMES.map((_, i) => i));
+    const allSelected = activeCategoryKeys.size === FILTER_GROUPS.length;
+    activeCategoryKeys = new Set(allSelected ? [] : FILTER_GROUPS);
+    recomputeActiveClassIndices();
     renderFilterUI();
   });
   chips.appendChild(allChip);
 
-  CLASS_NAMES.forEach((name, idx)=>{
-    const cat = resolveCategory(name);
+  FILTER_GROUPS.forEach(key=>{
+    const cat = CATEGORIES[key];
+    const label = cat ? cat.label.split(" ")[0].replace("/", "") : "Outras";
+    const color = cat ? cat.color : "var(--rejeito)";
     const chip = document.createElement("div");
-    chip.className = "chip" + (activeClassIndices.has(idx) ? " active" : "");
-    chip.innerHTML = `<span class="chip-dot" style="background:${cat ? cat.color : "var(--rejeito)"}"></span>${name}`;
+    chip.className = "chip" + (activeCategoryKeys.has(key) ? " active" : "");
+    chip.innerHTML = `<span class="chip-dot" style="background:${color}"></span>${label}`;
+    chip.title = key === "outras" ? "Objetos detectados sem categoria de descarte mapeada" : cat.label;
     chip.addEventListener("click", ()=>{
-      if(activeClassIndices.has(idx)) activeClassIndices.delete(idx);
-      else activeClassIndices.add(idx);
+      if(activeCategoryKeys.has(key)) activeCategoryKeys.delete(key);
+      else activeCategoryKeys.add(key);
+      recomputeActiveClassIndices();
       renderFilterUI();
     });
     chips.appendChild(chip);
   });
 
-  allChip.classList.toggle("active", activeClassIndices.size === CLASS_NAMES.length);
+  allChip.classList.toggle("active", activeCategoryKeys.size === FILTER_GROUPS.length);
 
-  if(activeClassIndices.size === 0){
-    statusText.textContent = "Selecione ao menos uma classe no filtro para detectar.";
+  if(activeCategoryKeys.size === 0){
+    statusText.textContent = "Selecione ao menos uma categoria no filtro para detectar.";
   }else if(running && !paused){
     statusText.textContent = "Detectando em tempo real…";
   }
 }
+recomputeActiveClassIndices();
 renderFilterUI();
 
 /* =========================================================
